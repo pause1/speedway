@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>zuzel</title>
+
+    <style>
+        body {
+            margin: 10px auto;
+            text-align: center;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        img {
+            display: none;
+        }
+    </style>
+
+    <script>
+        function myKeyPress(e) {
+            var keynum;
+
+            if (window.event) { // IE                    
+                keynum = e.keyCode;
+            } else if (e.which) { // Netscape/Firefox/Opera                   
+                keynum = e.which;
+            }
+
+            motury.keycollection.push(String.fromCharCode(keynum))
+            motury.klawisz()
+        }
+        document.addEventListener("DOMContentLoaded", function (event) {
+
+            globalne = {
+                i: 250,
+                j: 300,
+                click: false,
+                alpha: 0,
+                srodek: null,
+                zewnatrz: null,
+                aktualnie: null,
+                rysujtlo: true,
+                framecounter: 0,
+                framecountercheckvalue: null,
+                trawa: null,
+                zuzel: null,
+                kolory: ["255,0,0", "255,255,0", "0,255,0", "0,0,255"],
+                koloryText: ["czerwony", "żółty", "zielony", "niebieski"],
+                okrazen: 5,
+                wygrana: function (gracz) {
+                    for (var i = 0; i < motury.collection.length; i++)
+                        if (motury.collection[i].tablicadlugosci.length > 0) {
+                            alert("Wygrał gracz " + (i + 1) + " (" + globalne.koloryText[i] + ")")
+                            location.reload();
+                        }
+                },
+                checkPozostale: function () {
+                    var numbers = []
+                    for (var i = 0; i < motury.collection.length; i++)
+                        numbers.push(motury.collection[i].okrazenLeft)
+
+                    var sorted = numbers.slice().sort(function (a, b) {
+                        return a - b;
+                    });
+
+                    document.getElementById("inputnumer").innerHTML = "Pozostało okrążeń: " + sorted[0]
+                }
+            }
+
+            motury = {
+                kontrolka: 0,
+                kontrolkaA: 0,
+                keycollection: [],
+                collection: [],
+                add: function () {
+                    motury.kontrolka += 1
+                    motury.collection.push(new _kurwaMotur())
+                    motury.collection[motury.collection.length - 1].i = 250
+                    motury.collection[motury.collection.length - 1].j = 250 + (motury.collection.length) * 20
+                    motury.collection[motury.collection.length - 1].click = false
+                    motury.collection[motury.collection.length - 1].alpha = 0
+                    motury.collection[motury.collection.length - 1].klawisz = motury.keycollection[motury.collection.length - 1]
+                    motury.collection[motury.collection.length - 1].tablicadlugosci = []
+                    motury.collection[motury.collection.length - 1].texture = document.getElementById("motur" + motury.collection.length)
+                    motury.collection[motury.collection.length - 1].color = globalne.kolory[motury.collection.length - 1]
+                    motury.collection[motury.collection.length - 1].kontrolaMety = false
+                    motury.collection[motury.collection.length - 1].okrazenLeft = globalne.okrazen
+                    motury.collection[motury.collection.length - 1].numerro = motury.collection.length - 1
+
+                    motury.collection[motury.collection.length - 1].myKeyPress2 = function (e) {
+                        console.log("?")
+                        var keynum;
+
+                        if (window.event) { // IE                    
+                            keynum = window.event.keyCode;
+                        } else if (e.which) { // Netscape/Firefox/Opera                   
+                            keynum = e.which;
+                        }
+
+                        globalne.aktualnie = String.fromCharCode(keynum)
+
+                        for (var i = 0; i < motury.keycollection.length; i++) {
+                            if (globalne.aktualnie == motury.keycollection[i])
+                                motury.collection[i].click = true
+                        }
+                    }
+
+                },
+                ask: function () {
+                    motury.kontrolkaA = 2
+                    globalne.framecountercheckvalue = 2
+
+                    var xd = prompt("Ile motorów będzie grać?")
+                    if (xd >= 1 && xd <= 4) {
+                        motury.kontrolkaA = xd
+                        globalne.framecountercheckvalue = xd
+                    }
+                    else {
+                        alert("Podano nieprawidłową ilość! Dozwolone wartości z zakresu 1-4.")
+                        motury.ask()
+                        return 0;
+                    }
+                },
+                klawisz: function () {
+                    document.getElementById("klawi").blur()
+                    document.getElementById("klawi").value = ""
+                    if (motury.keycollection.length < motury.kontrolkaA) {
+                        document.getElementById("numer").innerHTML = motury.keycollection.length + 1
+                        document.getElementById("klawi").disabled = false
+                    }
+                    else {
+                        setTimeout(function () {
+                            document.getElementById("inputnumer").innerHTML = "Start gry za 3 sekundy!"
+                        }, 100);
+
+                        setTimeout(function () {
+                            document.getElementById("inputnumer").innerHTML = "Start gry za 2 sekundy!"
+                        }, 1100);
+
+                        setTimeout(function () {
+                            document.getElementById("inputnumer").innerHTML = "Start gry za sekundę!"
+                        }, 2100);
+
+                        setTimeout(function () {
+                            globalne.checkPozostale()
+                            for (var i = 0; i < motury.kontrolkaA; i++) {
+                                var canvas = document.getElementsByTagName("canvas")[0]
+                                canvas.style.display = "inline-block"
+                                motury.add()
+                                refreshRoute()
+                            }
+                        }, 3500);
+                    }
+                }
+            }
+            init()
+            motury.ask()
+            motury.klawisz()
+        });
+
+        function init() {
+            var canvas = document.getElementsByTagName("canvas")[0]
+            canvas.style.backgroundImage = "url('tex/grass.jpg')"
+        }
+
+        function refreshRoute() {
+            var canvas = document.getElementsByTagName("canvas")[0]
+            canvas.style.backgroundImage = "url('tex/grass.jpg')"
+
+            var ctx = canvas.getContext("2d");
+
+            var img = document.getElementById("tex_grass")
+            globalne.trawa = ctx.createPattern(img, "repeat")
+            var img = document.getElementById("tex_zuzel")
+            globalne.zuzel = ctx.createPattern(img, "repeat")
+
+            ctx.beginPath();
+            ctx.arc(250, 200, 145, Math.PI / 2, -Math.PI / 2);
+            ctx.arc(550, 200, 145, -Math.PI / 2, Math.PI / 2);
+            ctx.fillStyle = globalne.zuzel
+            ctx.closePath();
+            ctx.stroke();
+            ctx.fill();
+            globalne.srodek = ctx
+
+            ctx.beginPath();
+            ctx.arc(250, 200, 50, Math.PI / 2, -Math.PI / 2);
+            ctx.arc(550, 200, 50, -Math.PI / 2, Math.PI / 2);
+            ctx.closePath();
+            ctx.strokeStyle = "red";
+            ctx.fillStyle = globalne.trawa
+            ctx.lineWidth = 5;
+            ctx.stroke();
+            ctx.fill();
+            globalne.zewnatrz = ctx
+
+            ctx.beginPath();
+            ctx.fillRect(250, 253, 10, 92);
+            ctx.fillStyle = "white"
+            ctx.stroke()
+            ctx.closePath()
+        }
+
+
+        function _kurwaMotur() {
+
+            if (globalne.framecounter >= globalne.framecountercheckvalue) {
+                globalne.framecounter = 0
+                globalne.rysujtlo = true
+            }
+
+            if (globalne.rysujtlo) {
+                refreshRoute()
+                globalne.rysujtlo = false
+            }
+
+            globalne.framecounter++
+
+            var canvas = document.getElementsByTagName("canvas")[0]
+            var ctx = canvas.getContext("2d");
+
+            this.do = function () {
+
+                if (motury.collection.length >= motury.kontrolka) {
+                    var checker = false
+                    for (var i = 1; i < 50; i++) {
+                        var motorek = ctx.createPattern(this.texture, "repeat")
+                        function drawImage(ctx, image, x, y, w, h, degrees) {
+                            ctx.save();
+                            ctx.translate(x, y);
+                            ctx.rotate(degrees);
+                            ctx.translate(-x, -y);
+                            ctx.drawImage(image, x - 5, y - 5, w, h);
+                            ctx.restore();
+                        }
+                        if (this.tablicadlugosci[i] && this.tablicadlugosci[i - 1]) {
+                            if (i != 49) {
+                                ctx.beginPath();
+                                ctx.moveTo(this.tablicadlugosci[i].x, this.tablicadlugosci[i].y);
+                                ctx.lineTo(this.tablicadlugosci[i - 1].x, this.tablicadlugosci[i - 1].y);
+                                ctx.closePath();
+                                ctx.strokeStyle = "rgba(" + this.color + "," + i / 50 + ")";
+                                ctx.lineWidth = 5;
+                                ctx.stroke();
+                                ctx.closePath()
+                            }
+                            else {
+                                drawImage(ctx, this.texture, this.tablicadlugosci[i].x, this.tablicadlugosci[i].y, 25, 10, this.alpha)
+                            }
+                        }
+                        else {
+                            if (this.tablicadlugosci[0] && !checker)
+                                drawImage(ctx, this.texture, this.tablicadlugosci[i - 1].x, this.tablicadlugosci[i - 1].y, 25, 10, this.alpha)
+                            checker = true
+                        }
+                    }
+
+                    ctx.beginPath();
+                    ctx.moveTo(this.i, this.j);
+                    if (this.click == true)
+                        this.alpha -= 5 * Math.PI / 180
+                    var dx, dy
+                    dy = 2 * Math.sin(this.alpha)
+                    dx = 2 * Math.cos(this.alpha)
+                    this.i += dx
+                    this.j += dy
+                    ctx.lineTo(this.i, this.j);
+                    ctx.strokeStyle = "red";
+                    ctx.lineWidth = 5;
+                    ctx.closePath()
+
+                    var obiekt = {}
+                    obiekt.x = this.i
+                    obiekt.y = this.j
+
+                    if (this.tablicadlugosci.length > 50)
+                        this.tablicadlugosci.shift()
+                    this.tablicadlugosci.push(obiekt)
+
+                    ctx.beginPath();
+                    ctx.arc(250, 200, 145, Math.PI / 2, -Math.PI / 2);
+                    ctx.arc(550, 200, 145, -Math.PI / 2, Math.PI / 2);
+                    ctx.strokeStyle = "red";
+                    ctx.fillStyle = "none";
+                    ctx.closePath()
+                    if (!ctx.isPointInPath(this.i, this.j)) {
+                        globalne.framecountercheckvalue--
+                        this.tablicadlugosci = []
+                        if (globalne.framecountercheckvalue == 1)
+                            globalne.wygrana()
+                        return 0;
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(250, 200, 50, Math.PI / 2, -Math.PI / 2);
+                    ctx.arc(550, 200, 50, -Math.PI / 2, Math.PI / 2);
+                    ctx.strokeStyle = "red";
+                    ctx.fillStyle = "none";
+                    ctx.closePath()
+                    if (ctx.isPointInPath(this.i, this.j)) {
+                        globalne.framecountercheckvalue--
+                        this.tablicadlugosci = []
+                        if (globalne.framecountercheckvalue == 1)
+                            globalne.wygrana()
+                        return 0;
+                    }
+
+                    ctx.beginPath();
+                    ctx.fillRect(250, 253, 10, 92);
+                    ctx.fillStyle = "white"
+                    ctx.stroke()
+                    ctx.closePath()
+
+                    ctx.beginPath();
+                    ctx.rect(250, 253, 10, 92);
+                    if (ctx.isPointInPath(this.i, this.j))
+                        if (!this.kontrolaMety) {
+                            this.kontrolaMety = true
+                            this.okrazenLeft--
+                            globalne.checkPozostale()
+
+                            if (this.okrazenLeft == 0)
+                                globalne.wygrana()
+
+                            var ctrler = this
+                            setTimeout(function () {
+                                ctrler.kontrolaMety = false
+                            }, 3000);
+                        }
+                    ctx.closePath()
+                }
+                requestAnimationFrame(_kurwaMotur.bind(this))
+            }
+
+            function binduj() {
+                this.click = false
+                console.log(this.numerro + this.click)
+
+            }
+
+            if (!this.addOnce) {
+                window.addEventListener("keypress", () => {
+                    this.myKeyPress2()
+                });
+                console.log(this)
+                console.log(undefined == this.myKeyPress2)
+                window.addEventListener("keyup", binduj.bind(this));
+                this.addOnce = true
+            }
+            this.do()
+        }
+    </script>
+</head>
+
+<body>
+    <canvas id="canvas" width="800" height="400" style="border:solid 1px;"></canvas>
+    <br/>
+    <div id="inputnumer">Podaj klawisz sterowania graczem
+        <a id="numer"></a> :
+        <input type="text" name="klawi" id="klawi" onkeypress="return myKeyPress(event)" onfocus="this.value=''" />
+    </div>
+    <img src="tex/grass.jpg" alt="trawsko" id="tex_grass">
+    <img src="tex/zuzel.jpg" alt="zuzel" id="tex_zuzel">
+    <img src="tex/motur1.png" alt="motur" id="motur1">
+    <img src="tex/motur2.png" alt="motur" id="motur2">
+    <img src="tex/motur3.png" alt="motur" id="motur3">
+    <img src="tex/motur4.png" alt="motur" id="motur4">
+</body>
+
+</html>
